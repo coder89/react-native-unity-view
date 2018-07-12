@@ -67,3 +67,8 @@ android/*.iml
 /android/.project
 /android/.settings
 /out
+
+# Visual Studio
+.vs/
+bin/
+obj/
