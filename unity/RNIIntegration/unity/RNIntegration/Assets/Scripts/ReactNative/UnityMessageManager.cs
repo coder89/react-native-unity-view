@@ -457,6 +457,12 @@ namespace ReactNative
                     o.SendMessage(method, message, SendMessageOptions.DontRequireReceiver);
                 }
             }
+
+            public void Shutdown()
+            {
+                RNUnityViewBridge.BridgeBootstrapper.SetIL2CPPBridge(null);
+                UnityEngine.Application.Unload();
+            }
         }
 #endif
 
