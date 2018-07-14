@@ -7,7 +7,7 @@
 #include "UnityView.xaml.h"
 #include "UnityUtils.h"
 
-using namespace RNUnityViewBridge;
+using namespace UnityBridge;
 
 using namespace Concurrency;
 using namespace Platform;
@@ -21,6 +21,7 @@ using namespace Windows::UI::Core;
 using namespace Windows::UI::Xaml;
 using namespace Windows::UI::Xaml::Controls;
 using namespace Windows::UI::Xaml::Media;
+using namespace Windows::UI::Xaml::Media::Imaging;
 using namespace Windows::UI::Xaml::Navigation;
 
 UnityView::UnityView()
@@ -28,13 +29,22 @@ UnityView::UnityView()
 	m_SplashScreenRemovalEventToken.Value = 0;
 	m_OnResizeRegistrationToken.Value = 0;
 
-	InitializeComponent();
-	//NavigationCacheMode = ::NavigationCacheMode::Required;
-
-	if (!UnityUtils::IsInitialized)
-	{
-		UnityUtils::CreatePlayer();
-	}
+	//<SwapChainPanel x:Name="m_DXSwapChainPanel">
+	//    <Grid x:Name="m_ExtendedSplashGrid" Background="#FFFFFF">
+	//        <Image x:Name="m_ExtendedSplashImage" Source="Assets/SplashScreen.png" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+	//    </Grid>
+	//</SwapChainPanel>
+	m_DXSwapChainPanel = ref new SwapChainPanel();
+	m_ExtendedSplashGrid = ref new Grid();
+	m_ExtendedSplashGrid->Background = ref new SolidColorBrush(Windows::UI::Colors::White);
+	m_ExtendedSplashImage = ref new Image();
+	m_ExtendedSplashImage->Source = ref new BitmapImage(ref new Uri("ms-appx:///Assets/SplashScreen.png"));
+	m_ExtendedSplashImage->VerticalAlignment = ::VerticalAlignment::Center;
+	m_ExtendedSplashImage->HorizontalAlignment = ::HorizontalAlignment::Center;
+	m_ExtendedSplashGrid->Children->Append(m_ExtendedSplashImage);
+	m_DXSwapChainPanel->Children->Append(m_ExtendedSplashGrid);
+	Background = ref new SolidColorBrush(Windows::UI::Colors::White);
+	Content = m_DXSwapChainPanel;
 
 	auto appCallbacks = AppCallbacks::Instance;
 
@@ -48,23 +58,29 @@ UnityView::UnityView()
 
 	if (isWindowsHolographic)
 	{
-		appCallbacks->InitializeViewManager(Window::Current->CoreWindow);
+		if (!appCallbacks->IsInitialized())
+		{
+			appCallbacks->InitializeViewManager(Window::Current->CoreWindow);
+		}
 	}
 	else
 	{
 		m_SplashScreenRemovalEventToken = appCallbacks->RenderingStarted += ref new RenderingStartedHandler(this, &UnityView::RemoveSplashScreen);
 
-		appCallbacks->SetSwapChainPanel(m_DXSwapChainPanel);
-		appCallbacks->SetCoreWindowEvents(Window::Current->CoreWindow);
-		appCallbacks->InitializeD3DXAML();
-
-		m_SplashScreen = UnityUtils::SplashScreen;
-
-		auto dispatcher = CoreWindow::GetForCurrentThread()->Dispatcher;
-		ThreadPool::RunAsync(ref new WorkItemHandler([this, dispatcher](IAsyncAction^)
+		if (!appCallbacks->IsInitialized())
 		{
-			GetSplashBackgroundColor(dispatcher);
-		}));
+			appCallbacks->SetSwapChainPanel(m_DXSwapChainPanel);
+			appCallbacks->SetCoreWindowEvents(Window::Current->CoreWindow);
+			appCallbacks->InitializeD3DXAML();
+
+			m_SplashScreen = UnityUtils::SplashScreen;
+
+			auto dispatcher = CoreWindow::GetForCurrentThread()->Dispatcher;
+			ThreadPool::RunAsync(ref new WorkItemHandler([this, dispatcher](IAsyncAction^)
+			{
+				GetSplashBackgroundColor(dispatcher);
+			}));
+		}
 
 		OnResize();
 

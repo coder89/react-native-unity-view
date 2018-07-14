@@ -109,39 +109,47 @@ public static class UWPPostBuild
         if (File.Exists(cppProjectFile))
         {
             // Handle as IL2CPP scripting backend
-            //File.Copy(
-            //    Path.Combine(uwpScriptsDir, "App.xaml.cpp"),
-            //    Path.Combine(pathToUWPProject, "App.xaml.cpp"),
-            //    true);
-            //File.Copy(
-            //    Path.Combine(uwpScriptsDir, "App.xaml.h"),
-            //    Path.Combine(pathToUWPProject, "App.xaml.h"),
-            //    true);
-            //File.Copy(
-            //    Path.Combine(uwpScriptsDir, "MainPage.xaml"),
-            //    Path.Combine(pathToUWPProject, "MainPage.xaml"),
-            //    true);
-            //File.Copy(
-            //    Path.Combine(uwpScriptsDir, "MainPage.xaml.cpp"),
-            //    Path.Combine(pathToUWPProject, "MainPage.xaml.cpp"),
-            //    true);
-            //File.Copy(
-            //    Path.Combine(uwpScriptsDir, "MainPage.xaml.h"),
-            //    Path.Combine(pathToUWPProject, "MainPage.xaml.h"),
-            //    true);
-
             string cppProjectFile_Text = File.ReadAllText(cppProjectFile);
             XNamespace defaultNS = "http://schemas.microsoft.com/developer/msbuild/2003";
             XDocument csharpProject = XDocument.Parse(cppProjectFile_Text);
             XElement xamlRootParent = csharpProject.Root;
 
-            foreach (var ct in xamlRootParent.Elements(defaultNS + "PropertyGroup").Select(m => m.Element(defaultNS + "ConfigurationType")))
+            foreach (var ct in xamlRootParent.Elements(defaultNS + "PropertyGroup").Select(m => m?.Element(defaultNS + "ConfigurationType")).ToArray())
             {
                 if (ct != null)
                 {
                     ct.SetValue("DynamicLibrary");
                 }
             }
+
+            foreach (var ct in xamlRootParent
+                .Elements(defaultNS + "ItemGroup")
+                .SelectMany(m => m?
+                    .Elements(defaultNS + "ClCompile")
+                    .Union(m.Elements(defaultNS + "ClInclude"))
+                    .Where(n => n?.Element(defaultNS + "DependentUpon") != null)
+                    .Union(m.Elements(defaultNS + "ApplicationDefinition"))
+                    .Union(m.Elements(defaultNS + "None"))
+                    .Union(m.Elements(defaultNS + "AppxManifest"))
+                    .Union(m.Elements(defaultNS + "Page")))
+                .Union(
+                    xamlRootParent.Elements(defaultNS + "PropertyGroup")
+                    .SelectMany(m => m?.Elements(defaultNS + "PackageCertificateKeyFile")))
+                .Where(m => m != null)
+                .ToArray())
+            {
+                ct.Remove();
+            }
+
+            xamlRootParent.Elements(defaultNS + "PropertyGroup").Select(m => m?.Element(defaultNS + "RootNamespace")).FirstOrDefault()?.SetValue("UnityBridge");
+            xamlRootParent.Elements(defaultNS + "PropertyGroup").FirstOrDefault()?.Add(
+                new XElement(defaultNS + "Keyword", "WindowsRuntimeComponent"));
+            xamlRootParent.Elements(defaultNS + "ItemDefinitionGroup")
+                .SelectMany(m => m?.Elements(defaultNS + "ClCompile"))
+                .Select(m => m?.Element(defaultNS + "PreprocessorDefinitions"))
+                .Where(m => m != null)
+                .ToList()
+                .ForEach(m => m.SetValue("_WINRT_DLL;" + m.Value));
 
             xamlRootParent.Add(
                 new XElement(defaultNS + "PropertyGroup",
@@ -152,19 +160,47 @@ public static class UWPPostBuild
                     new XElement(defaultNS + "ClCompile",
                         new XAttribute("Include", Path.Combine(uwpScriptsDirRelative, "UnityUtils.cpp"))),
                     new XElement(defaultNS + "ClCompile",
-                        new XAttribute("Include", Path.Combine(uwpScriptsDirRelative, "UnityView.xaml.cpp")),
-                        new XElement(defaultNS + "DependentUpon", Path.Combine(uwpScriptsDirRelative, "UnityView.xaml"))),
+                        new XAttribute("Include", Path.Combine(uwpScriptsDirRelative, "UnityView.xaml.cpp"))),
                     new XElement(defaultNS + "ClInclude",
                         new XAttribute("Include", Path.Combine(uwpScriptsDirRelative, "UnityUtils.h"))),
                     new XElement(defaultNS + "ClInclude",
-                        new XAttribute("Include", Path.Combine(uwpScriptsDirRelative, "UnityView.xaml.h")),
-                        new XElement(defaultNS + "DependentUpon", Path.Combine(uwpScriptsDirRelative, "UnityView.xaml"))),
-                    new XElement(defaultNS + "Page",
-                        new XAttribute("Include", Path.Combine(uwpScriptsDirRelative, "UnityView.xaml")),
-                        new XElement(defaultNS + "SubType", "Designer"))));
+                        new XAttribute("Include", Path.Combine(uwpScriptsDirRelative, "UnityView.xaml.h")))));
             cppProjectFile_Text = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" + csharpProject.ToString(SaveOptions.None);
             File.WriteAllText(cppProjectFile, cppProjectFile_Text);
+
+            // Move files abound
+            File.Move(cppProjectFile, Path.Combine(pathToUWPProject, "UnityBridge.vcxproj"));
+            File.Move(cppProjectFile + ".filters", Path.Combine(pathToUWPProject, "UnityBridge.vcxproj.filters"));
+            Directory.Move(pathToUWPProject, Path.Combine(Path.GetDirectoryName(pathToUWPProject), "UnityBridge"));
+            pathToUWPProject = Path.Combine(Path.GetDirectoryName(pathToUWPProject), "UnityBridge");
+
+            // Clear App.xaml.cpp/h
+            File.Open(pathToUWPProject + "/App.xaml.h", FileMode.OpenOrCreate | FileMode.Truncate).Dispose();
+            File.Open(pathToUWPProject + "/App.xaml.cpp", FileMode.OpenOrCreate | FileMode.Truncate).Dispose();
+
+            UpdateNativeDependencyProject(pathToUWPProject, projectName);
             return;
+        }
+    }
+
+    private static void UpdateNativeDependencyProject(string pathToUWPProject, string projectName)
+    {
+        string cppProjectFile = Path.Combine(pathToUWPProject, "Unity Data.vcxitems");
+        if (File.Exists(cppProjectFile))
+        {
+            string cppProjectFile_Text = File.ReadAllText(cppProjectFile);
+            XNamespace defaultNS = "http://schemas.microsoft.com/developer/msbuild/2003";
+            XDocument csharpProject = XDocument.Parse(cppProjectFile_Text);
+            XElement xamlRootParent = csharpProject.Root;
+
+            xamlRootParent.Elements(defaultNS + "Target")
+                .SelectMany(m => m.Elements(defaultNS + "Copy"))
+                .SelectMany(m => m.Attributes("SourceFiles").Union(m.Attributes("Condition")))
+                .ToList()
+                .ForEach(m => m.SetValue(m.Value.Replace("$(ProjectDir)", "$(MSBuildThisFileDirectory)")));
+
+            cppProjectFile_Text = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" + csharpProject.ToString(SaveOptions.None);
+            File.WriteAllText(cppProjectFile, cppProjectFile_Text);
         }
     }
 }

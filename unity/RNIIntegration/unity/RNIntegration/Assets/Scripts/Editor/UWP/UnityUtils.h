@@ -1,14 +1,13 @@
 #pragma once
 
-namespace RNUnityViewBridge
+namespace UnityBridge
 {
 	ref class UnityPlayer;
+	ref class UnityView;
 
-	[Windows::Foundation::Metadata::WebHostHidden]
 	public ref class UnityUtils sealed
 	{
-		static RNUnityViewBridge::UnityPlayer^ m_player;
-		static ::UnityPlayer::AppCallbacks^ m_appCallbacks;
+		static UnityBridge::UnityPlayer^ m_player;
 		static Windows::ApplicationModel::Activation::SplashScreen^ m_splashScreen;
 
 	private:
@@ -20,9 +19,9 @@ namespace RNUnityViewBridge
 			bool get();
 		}
 
-		static property RNUnityViewBridge::UnityPlayer^ Player
+		static property UnityBridge::UnityPlayer^ Player
 		{
-			RNUnityViewBridge::UnityPlayer^ get();
+			UnityBridge::UnityPlayer^ get();
 		}
 
 		static property Windows::ApplicationModel::Activation::SplashScreen^ SplashScreen
@@ -33,26 +32,44 @@ namespace RNUnityViewBridge
 
 		static void CreatePlayer();
 		static void SetupOrientation();
-		static void PostMessage(Platform::String^ gameObject, Platform::String^ method, Platform::String^ message);
+
+	internal:
+		static void DestroyPlayer();
 	};
 
-	[Windows::Foundation::Metadata::WebHostHidden]
 	public delegate void OnUnityMessageDelegate(Platform::String^ message);
 
-	[Windows::Foundation::Metadata::WebHostHidden]
-	public ref class UnityPlayer sealed : IDotNetBridge
+	public ref class UnityPlayer sealed : RNUnityViewBridge::IDotNetBridge
 	{
 		::UnityPlayer::AppCallbacks^ m_appCallbacks;
+		UnityView^ m_view;
+
+		Windows::Foundation::EventRegistrationToken m_loadedToken;
+		Windows::UI::Xaml::DependencyObject^ m_viewParent;
 
 	public:
-		UnityPlayer(::UnityPlayer::AppCallbacks^ appCallbacks); 
+		UnityPlayer(::UnityPlayer::AppCallbacks^ appCallbacks);
 		virtual ~UnityPlayer();
 
 		event OnUnityMessageDelegate^ OnUnityMessage;
 
+		property bool IsInitialized
+		{
+			bool get();
+		}
+
+		property UnityView^ View
+		{
+			UnityView^ get();
+		}
+
+		void Detach();
+
 		void Pause();
 		void Resume();
 		void Quit();
+
+		void PostMessage(Platform::String^ gameObject, Platform::String^ method, Platform::String^ message);
 
 		virtual void onMessage(Platform::String^ message);
 	};

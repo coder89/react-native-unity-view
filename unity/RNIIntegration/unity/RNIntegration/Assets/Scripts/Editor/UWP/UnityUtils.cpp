@@ -1,8 +1,10 @@
 
 #include "pch.h"
 #include "UnityUtils.h"
+#include "UnityView.xaml.h"
 #include "UnityGenerated.h"
 
+using namespace UnityBridge;
 using namespace RNUnityViewBridge;
 
 using namespace Concurrency;
@@ -19,16 +21,15 @@ using namespace Windows::UI::Xaml::Controls;
 using namespace Windows::UI::Xaml::Media;
 using namespace Windows::UI::Xaml::Navigation;
 
-::UnityPlayer::AppCallbacks^ UnityUtils::m_appCallbacks = nullptr;
-RNUnityViewBridge::UnityPlayer^ UnityUtils::m_player = nullptr;
+UnityBridge::UnityPlayer^ UnityUtils::m_player = nullptr;
 Windows::ApplicationModel::Activation::SplashScreen^ UnityUtils::m_splashScreen = nullptr;
 
 bool UnityUtils::IsInitialized::get()
 {
-	return m_appCallbacks != nullptr && m_appCallbacks->IsInitialized();
+	return m_player != nullptr && m_player->IsInitialized;
 }
 
-RNUnityViewBridge::UnityPlayer^ UnityUtils::Player::get()
+UnityBridge::UnityPlayer^ UnityUtils::Player::get()
 {
 	return m_player;
 }
@@ -45,12 +46,22 @@ void UnityUtils::SplashScreen::set(::SplashScreen^ value)
 
 void UnityUtils::CreatePlayer()
 {
-	if (m_appCallbacks == nullptr)
+	if (m_player == nullptr)
 	{
 		SetupOrientation();
-		m_appCallbacks = ref new AppCallbacks();
-		m_player = ref new UnityPlayer(m_appCallbacks);
+		auto appCallbacks = AppCallbacks::Instance;
+		if (appCallbacks == nullptr)
+		{
+			appCallbacks = ref new AppCallbacks();
+		}
+
+		m_player = ref new UnityPlayer(appCallbacks);
 	}
+}
+
+void UnityUtils::DestroyPlayer()
+{
+	m_player = nullptr;
 }
 
 void UnityUtils::SetupOrientation()
@@ -58,7 +69,103 @@ void UnityUtils::SetupOrientation()
 	Unity::SetupDisplay();
 }
 
-void UnityUtils::PostMessage(Platform::String^ gameObject, Platform::String^ method, Platform::String^ message)
+UnityBridge::UnityPlayer::UnityPlayer(::UnityPlayer::AppCallbacks^ appCallbacks)
+	: m_appCallbacks(appCallbacks)
+{
+	m_appCallbacks->InvokeOnAppThread(ref new ::UnityPlayer::AppCallbackItem([this]()
+	{
+		BridgeBootstrapper::SetDotNetBridge(this);
+	}), false);
+
+	m_view = ref new UnityView();
+	m_loadedToken = m_view->Loaded += ref new Windows::UI::Xaml::RoutedEventHandler([this](auto s, auto a) {
+		m_viewParent = m_view->Parent;
+	});
+}
+
+UnityBridge::UnityPlayer::~UnityPlayer()
+{
+	Quit();
+}
+
+bool UnityBridge::UnityPlayer::IsInitialized::get()
+{
+	return m_appCallbacks != nullptr && m_appCallbacks->IsInitialized();
+}
+
+UnityView^ UnityBridge::UnityPlayer::View::get()
+{
+	return m_view;
+}
+
+void UnityBridge::UnityPlayer::Detach()
+{
+	auto viewParent = m_viewParent;
+	m_viewParent = nullptr;
+
+	if (viewParent)
+	{
+		auto panel = safe_cast<Panel^>(viewParent);
+		if (panel)
+		{
+			unsigned int index;
+			if (panel->Children->IndexOf(m_view, &index))
+			{
+				panel->Children->RemoveAt(index);
+			}
+			return;
+		}
+
+		auto control = safe_cast<UserControl^>(viewParent);
+		if (control)
+		{
+			control->Content = nullptr;
+			return;
+		}
+
+		auto border = safe_cast<Border^>(viewParent);
+		if (border)
+		{
+			border->Child = nullptr;
+			return;
+		}
+	}
+}
+
+void UnityBridge::UnityPlayer::Pause()
+{
+	m_appCallbacks->UnityPause(1);
+}
+
+void UnityBridge::UnityPlayer::Resume()
+{
+	m_appCallbacks->UnityPause(0);
+}
+
+void UnityBridge::UnityPlayer::Quit()
+{
+	Pause();
+
+	Detach();
+	m_view = nullptr;
+	m_view->Loaded -= m_loadedToken;
+
+	//UnityUtils::DestroyPlayer();
+
+	//m_appCallbacks->InvokeOnAppThread(ref new ::UnityPlayer::AppCallbackItem([this]()
+	//{
+	//	//BridgeBootstrapper::SetDotNetBridge(nullptr);
+	//	auto bridge = BridgeBootstrapper::GetIL2CPPBridge();
+	//	if (bridge != nullptr)
+	//	{
+	//		bridge->Shutdown();
+	//	}
+	//}), true);
+
+	//m_appCallbacks = nullptr;
+}
+
+void UnityBridge::UnityPlayer::PostMessage(Platform::String^ gameObject, Platform::String^ method, Platform::String^ message)
 {
 	m_appCallbacks->InvokeOnAppThread(ref new ::UnityPlayer::AppCallbackItem([gameObject, method, message]()
 	{
@@ -70,41 +177,7 @@ void UnityUtils::PostMessage(Platform::String^ gameObject, Platform::String^ met
 	}), false);
 }
 
-RNUnityViewBridge::UnityPlayer::UnityPlayer(::UnityPlayer::AppCallbacks^ appCallbacks)
-	: m_appCallbacks(appCallbacks)
-{
-	m_appCallbacks->InvokeOnAppThread(ref new ::UnityPlayer::AppCallbackItem([this]()
-	{
-		BridgeBootstrapper::SetDotNetBridge(this);
-	}), false);
-}
-
-RNUnityViewBridge::UnityPlayer::~UnityPlayer()
-{
-	Quit();
-}
-
-void RNUnityViewBridge::UnityPlayer::Pause()
-{
-	m_appCallbacks->UnityPause(1);
-}
-
-void RNUnityViewBridge::UnityPlayer::Resume()
-{
-	m_appCallbacks->UnityPause(0);
-}
-
-void RNUnityViewBridge::UnityPlayer::Quit()
-{
-	m_appCallbacks->InvokeOnAppThread(ref new ::UnityPlayer::AppCallbackItem([this]()
-	{
-		BridgeBootstrapper::SetDotNetBridge(nullptr);
-	}), true);
-
-	m_appCallbacks = nullptr;
-}
-
-void RNUnityViewBridge::UnityPlayer::onMessage(Platform::String^ message)
+void UnityBridge::UnityPlayer::onMessage(Platform::String^ message)
 {
 	m_appCallbacks->InvokeOnUIThread(ref new ::UnityPlayer::AppCallbackItem([this, message]()
 	{
