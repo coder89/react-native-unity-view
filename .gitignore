@@ -72,3 +72,6 @@ android/*.iml
 .vs/
 bin/
 obj/
+
+#unity
+Library/
