@@ -18,6 +18,18 @@
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{A5A43C5B-DE2A-4C0C-9213-0A381AF9435A};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
   </PropertyGroup>
+  <PropertyGroup Condition=" '$(Platform)' == 'AnyCPU' ">
+    <PlatformShortName>AnyCPU</PlatformShortName>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Platform)' == 'ARM' ">
+    <PlatformShortName>ARM</PlatformShortName>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Platform)' == 'x64' ">
+    <PlatformShortName>x64</PlatformShortName>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Platform)' == 'x86' ">
+    <PlatformShortName>x86</PlatformShortName>
+  </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
@@ -107,7 +119,6 @@
     <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="IUnityEventListener.cs" />
     <Compile Include="UnityMessageEvent.cs" />
     <Compile Include="UnityViewManager.cs" />
     <Compile Include="UnityViewPackage.cs" />
@@ -123,20 +134,28 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\..\src\Vieware.App\node_modules\react-native-windows\ReactWindows\ReactNative\ReactNative.csproj">
+    <ProjectReference Include="..\..\..\..\windows\UnityExport\ViewareApp.Unity\ViewareApp.Unity.vcxproj">
+      <Project>{4d98cb1f-c494-4c63-b314-5d683356510e}</Project>
+      <Name>ViewareApp.Unity</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\react-native-windows\ReactWindows\ReactNative\ReactNative.csproj">
       <Project>{C7673AD5-E3AA-468C-A5FD-FA38154E205C}</Project>
       <Name>ReactNative</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\..\..\src\Vieware.App\windows\UnityExport\ViewareApp\ViewareApp.vcxproj">
-      <Project>{2fabdf39-a3a3-4497-95ba-5aee089ebf0f}</Project>
-      <Name>ViewareApp</Name>
-    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="$(SolutionDir)build\bin\$(Platform)\$(Configuration)\RNUnityViewBridge.winmd">
+      <Implementation>$(SolutionDir)build\bin\$(Platform)\$(Configuration)\RNUnityViewBridge.dll</Implementation>
+    </Reference>
   </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '14.0' ">
     <VisualStudioVersion>14.0</VisualStudioVersion>
   </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\WindowsXaml\v$(VisualStudioVersion)\Microsoft.Windows.UI.Xaml.CSharp.targets" />
-  <Import Project="$(UnityWSAPlayerDir)\$(SolutionName)\Unity Data.vcxitems" Label="Unity Data" />
+  <!-- <Import Project="$(UnityWSAPlayerDir)\$(SolutionName)\Unity Data.vcxitems" Label="Unity Data" /> -->
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

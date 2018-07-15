@@ -5,7 +5,7 @@ using Newtonsoft.Json.Linq;
 using ReactNative.Bridge;
 using ReactNative.UIManager;
 using ReactNative.UIManager.Events;
-using RNUnityViewBridge;
+using UnityBridge;
 
 namespace RNUnityView
 {
@@ -19,12 +19,12 @@ namespace RNUnityView
 
         private static bool DONOT_RESUME = false;
 
-        private ReactContext context;
+        private ReactContext reactContext;
 
-        public UnityViewManager(ReactContext context)
+        public UnityViewManager(ReactContext reactContext)
         {
-            this.context = context;
-            this.context.AddLifecycleEventListener(this);
+            this.reactContext = reactContext;
+            this.reactContext.AddLifecycleEventListener(this);
         }
 
         public override string Name => REACT_CLASS;
@@ -39,38 +39,50 @@ namespace RNUnityView
 
         public override void ReceiveCommand(UnityView view, int commandId, JArray args)
         {
-            switch (commandId)
+            if (UnityUtils.IsInitialized)
             {
-                case COMMAND_POST_MESSAGE:
-                    String gameObject = args[0].ToString();
-                    String methodName = args[1].ToString();
-                    String message = args[2].ToString();
-                    UnityUtils.PostMessage(gameObject, methodName, message);
-                    break;
-                case COMMAND_PAUSE:
-                    UnityUtils.Player.Pause();
-                    DONOT_RESUME = true;
-                    break;
-                case COMMAND_RESUME:
-                    UnityUtils.Player.Resume();
-                    DONOT_RESUME = false;
-                    break;
+                switch (commandId)
+                {
+                    case COMMAND_POST_MESSAGE:
+                        String gameObject = args[0].ToString();
+                        String methodName = args[1].ToString();
+                        String message = args[2].ToString();
+                        UnityUtils.Player.PostMessage(gameObject, methodName, message);
+                        break;
+                    case COMMAND_PAUSE:
+                        UnityUtils.Player.Pause();
+                        DONOT_RESUME = true;
+                        break;
+                    case COMMAND_RESUME:
+                        UnityUtils.Player.Resume();
+                        DONOT_RESUME = false;
+                        break;
+                }
             }
         }
 
         protected override UnityView CreateViewInstance(ThemedReactContext reactContext)
         {
-            UnityView view = new UnityView(reactContext);
-            UnityUtils.AddUnityEventListener(view);
-            view.AddOnAttachStateChangeListener(this);
-            return view;
-        }
+            if (!UnityUtils.IsInitialized)
+            {
+                UnityUtils.CreatePlayer();
+                UnityUtils.Player.OnUnityMessage -= Player_OnUnityMessage;
+                UnityUtils.Player.OnUnityMessage += Player_OnUnityMessage;
+            }
 
+            UnityUtils.Player.Detach();
+
+            return UnityUtils.Player.View;
+        }
 
         public override void OnDropViewInstance(ThemedReactContext reactContext, UnityView view)
         {
-            UnityUtils.RemoveUnityEventListener(view);
-            view.RemoveOnAttachStateChangeListener(this);
+            if (UnityUtils.IsInitialized)
+            {
+                UnityUtils.Player.OnUnityMessage -= Player_OnUnityMessage;
+                UnityUtils.Player.Quit();
+            }
+
             base.OnDropViewInstance(reactContext, view);
         }
 
@@ -96,6 +108,8 @@ namespace RNUnityView
             if (!UnityUtils.IsInitialized)
             {
                 UnityUtils.CreatePlayer();
+                UnityUtils.Player.OnUnityMessage -= Player_OnUnityMessage;
+                UnityUtils.Player.OnUnityMessage += Player_OnUnityMessage;
             }
             else
             {
@@ -108,58 +122,27 @@ namespace RNUnityView
 
         public void OnDestroy()
         {
-            UnityUtils.Player.Quit();
+            if (UnityUtils.IsInitialized)
+            {
+                UnityUtils.Player.Quit();
+            }
         }
 
-        //    @Override
-        //    public void onViewAttachedToWindow(View v)
-        //    {
-        //        // restore the unity player state
-        //        if (DONOT_RESUME)
-        //        {
-        //            Handler handler = new Handler();
-        //            handler.postDelayed(new Runnable() {
-        //                @Override
-        //                public void run()
-        //            {
-        //                UnityUtils.getPlayer().pause();
-        //            }
-        //        }, 300); //TODO: 300 is the right one?
-        //    }
-        //}
-
-        //@Override
-        //    public void onViewDetachedFromWindow(View v)
-        //{
-
-        //}//    @Override
-        //    public void onViewAttachedToWindow(View v)
-        //    {
-        //        // restore the unity player state
-        //        if (DONOT_RESUME)
-        //        {
-        //            Handler handler = new Handler();
-        //            handler.postDelayed(new Runnable() {
-        //                @Override
-        //                public void run()
-        //            {
-        //                UnityUtils.getPlayer().pause();
-        //            }
-        //        }, 300); //TODO: 300 is the right one?
-        //    }
-        //}
-
-        //@Override
-        //    public void onViewDetachedFromWindow(View v)
-        //{
-
-        //}
-        protected static void dispatchEvent(UnityView view, Event @event)
+        private void Player_OnUnityMessage(string message)
         {
-            //ReactContext reactContext = (ReactContext)view.getContext();
-            //    EventDispatcher eventDispatcher = 
-            //            reactContext.getNativeModule(UIManagerModule.class).getEventDispatcher();
-            //eventDispatcher.dispatchEvent(event);
+            if (UnityUtils.IsInitialized)
+            {
+                this.DispatchEvent(
+                    new UnityMessageEvent(
+                        UnityUtils.Player.View.GetTag(),
+                        message));
+            }
+        }
+
+        private void DispatchEvent(Event @event)
+        {
+            EventDispatcher eventDispatcher = this.reactContext.GetNativeModule<UIManagerModule>().EventDispatcher;
+            eventDispatcher.DispatchEvent(@event);
         }
     }
 }
