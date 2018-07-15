@@ -193,6 +193,18 @@ public static class UWPPostBuild
             XDocument csharpProject = XDocument.Parse(cppProjectFile_Text);
             XElement xamlRootParent = csharpProject.Root;
 
+            xamlRootParent.Elements(defaultNS + "ItemGroup")
+                .SelectMany(m => m.Elements(defaultNS + "None"))
+                .ToList()
+                .ForEach(m =>
+                {
+                    var includeAttr = m.Attribute("Include");
+                    includeAttr?.SetValue(includeAttr.Value.Replace("$(OutDir)", "$(UnityWSAPlayerOutDir)"));
+                    m.Name = defaultNS + "Content";
+                    m.Elements().ToList().ForEach(e => e.Remove());
+                    m.Add(new XElement(defaultNS + "CopyToOutputDirectory", "PreserveNewest"));
+                });
+
             xamlRootParent.Elements(defaultNS + "Target")
                 .SelectMany(m => m.Elements(defaultNS + "Copy"))
                 .SelectMany(m => m.Attributes("SourceFiles").Union(m.Attributes("Condition")))
