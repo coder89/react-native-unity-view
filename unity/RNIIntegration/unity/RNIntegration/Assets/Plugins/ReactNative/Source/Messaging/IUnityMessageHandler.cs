@@ -41,7 +41,7 @@ namespace ReactNative
         /// Send response message to send back to the client.
         /// </summary>
         /// <param name="data">The response data</param>
-        void SendResponse(object data = null);
+        void SendResponse(object data = default);
 
         /// <summary>
         /// Send cancellation to send back to the client.
@@ -69,5 +69,9 @@ namespace ReactNative
             [CallerLineNumber] int sourceLineNumber = 0);
 
         #endregion
+    }
+
+    public interface IUnityMessageHandler<in TResponse> : IUnityMessageHandler
+    {
     }
 }

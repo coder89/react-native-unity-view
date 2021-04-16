@@ -51,8 +51,8 @@ public static class UWPPostBuild
     /// </summary>
     private static void UpdateUnityProjectFiles(string pathToBuiltProject)
     {
-        string uwpScriptsDirRelative = "../../../unity/" + Path.Combine(Path.GetFileName(Directory.GetCurrentDirectory()), "Assets", "Scripts", "Editor", "UWP");
-        string uwpScriptsDir = Path.Combine(Directory.GetCurrentDirectory() + "/Assets/Scripts/Editor/UWP");
+        string uwpRNPluginDirRelative = "../../../unity/" + Path.Combine(Path.GetFileName(Directory.GetCurrentDirectory()), "Assets/Plugins/ReactNative/Source/Editor/UWP");
+        string uwpRNPluginDir = Path.Combine(Directory.GetCurrentDirectory() + "/Assets/Plugins/ReactNative/Source/Editor/UWP");
 
         string projectName = Path.GetFileNameWithoutExtension(Directory.GetFiles(pathToBuiltProject).First(m => m.EndsWith(".sln")));
         string pathToUWPProject = Path.Combine(pathToBuiltProject, projectName);
@@ -62,11 +62,11 @@ public static class UWPPostBuild
         {
             // Handle as .NET scripting backend
             //File.Copy(
-            //    Path.Combine(uwpScriptsDir, "MainPage.xaml"),
+            //    Path.Combine(uwpRNPluginDir, "MainPage.xaml"),
             //    Path.Combine(pathToUWPProject, "MainPage.xaml"),
             //    true);
             //File.Copy(
-            //    Path.Combine(uwpScriptsDir, "MainPage.xaml.cs"),
+            //    Path.Combine(uwpRNPluginDir, "MainPage.xaml.cs"),
             //    Path.Combine(pathToUWPProject, "MainPage.xaml.cs"),
             //    true);
 
@@ -86,14 +86,14 @@ public static class UWPPostBuild
             xamlRootParent.Add(
                 new XElement(defaultNS + "ItemGroup",
                     new XElement(defaultNS + "Compile",
-                        new XAttribute("Include", Path.Combine(uwpScriptsDirRelative, "UnityUtils.cs")),
+                        new XAttribute("Include", Path.Combine(uwpRNPluginDirRelative, "UnityUtils.cs")),
                         new XElement(defaultNS + "Link", "UnityUtils.cs")),
                     new XElement(defaultNS + "Compile",
-                        new XAttribute("Include", Path.Combine(uwpScriptsDirRelative, "UnityView.xaml.cs")),
+                        new XAttribute("Include", Path.Combine(uwpRNPluginDirRelative, "UnityView.xaml.cs")),
                         new XElement(defaultNS + "Link", "UnityView.xaml.cs"),
                         new XElement(defaultNS + "DependentUpon", "UnityView.xaml")),
                     new XElement(defaultNS + "Page",
-                        new XAttribute("Include", Path.Combine(uwpScriptsDirRelative, "UnityView.xaml")),
+                        new XAttribute("Include", Path.Combine(uwpRNPluginDirRelative, "UnityView.xaml")),
                         new XElement(defaultNS + "Link", "UnityView.xaml"),
                         new XElement(defaultNS + "Generator", "MSBuild:Compile"),
                         new XElement(defaultNS + "SubType", "Designer"))));
@@ -151,17 +151,17 @@ public static class UWPPostBuild
             xamlRootParent.Add(
                 new XElement(defaultNS + "PropertyGroup",
                     new XElement(defaultNS + "IncludePath",
-                        @"$(ProjectDir)" + uwpScriptsDirRelative + @";$(IncludePath)")));
+                        @"$(ProjectDir)" + uwpRNPluginDirRelative + @";$(IncludePath)")));
             xamlRootParent.Add(
                 new XElement(defaultNS + "ItemGroup",
                     new XElement(defaultNS + "ClCompile",
-                        new XAttribute("Include", Path.Combine(uwpScriptsDirRelative, "UnityUtils.cpp"))),
+                        new XAttribute("Include", Path.Combine(uwpRNPluginDirRelative, "UnityUtils.cpp"))),
                     new XElement(defaultNS + "ClCompile",
-                        new XAttribute("Include", Path.Combine(uwpScriptsDirRelative, "UnityView.xaml.cpp"))),
+                        new XAttribute("Include", Path.Combine(uwpRNPluginDirRelative, "UnityView.xaml.cpp"))),
                     new XElement(defaultNS + "ClInclude",
-                        new XAttribute("Include", Path.Combine(uwpScriptsDirRelative, "UnityUtils.h"))),
+                        new XAttribute("Include", Path.Combine(uwpRNPluginDirRelative, "UnityUtils.h"))),
                     new XElement(defaultNS + "ClInclude",
-                        new XAttribute("Include", Path.Combine(uwpScriptsDirRelative, "UnityView.xaml.h")))));
+                        new XAttribute("Include", Path.Combine(uwpRNPluginDirRelative, "UnityView.xaml.h")))));
             cppProjectFile_Text = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" + csharpProject.ToString(SaveOptions.None);
             File.WriteAllText(cppProjectFile, cppProjectFile_Text);
 

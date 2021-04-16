@@ -68,6 +68,7 @@ android/*.iml
 /android/.settings
 /out
 package-lock.json
+android/
 
 # Visual Studio
 .vs/

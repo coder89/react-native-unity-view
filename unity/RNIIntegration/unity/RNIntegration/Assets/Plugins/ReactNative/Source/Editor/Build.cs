@@ -29,7 +29,6 @@ public static class Build
         {
             CurrentGroup = BuildTargetGroup.Android;
 
-            string buildPath = Path.Combine(apkPath, Application.productName);
             string exportPath = Path.GetFullPath(Path.Combine(ProjectPath, "../../android/UnityExport"));
 
             if (Directory.Exists(apkPath))
@@ -54,7 +53,26 @@ public static class Build
                 if (report.summary.result != BuildResult.Succeeded)
                     throw new Exception("Build failed");
 
-                Copy(buildPath, exportPath);
+                string buildPath = Path.Combine(apkPath, Application.productName);
+                if (Directory.Exists(buildPath))
+                {
+                    Copy(buildPath, exportPath, true);
+                }
+                else
+                {
+                    buildPath = Path.Combine(apkPath, "unityLibrary");
+                    if (Directory.Exists(buildPath))
+                    {
+                        Copy(buildPath, exportPath, true);
+
+                        string resourcesPath = Path.Combine(apkPath, "launcher");
+                        CopyMerge(resourcesPath, exportPath, false);
+                    }
+                    else
+                    {
+                        throw new Exception("Build failed - cannot find output files!");
+                    }
+                }
 
                 // Modify build.gradle
                 var build_file = Path.Combine(exportPath, "build.gradle");
@@ -62,8 +80,17 @@ public static class Build
                 build_text = build_text.Replace("com.android.application", "com.android.library");
                 build_text = Regex.Replace(build_text, @"com.android.tools.build:gradle:[0-9\.]+", "com.android.tools.build:gradle:3.2.1");
                 build_text = Regex.Replace(build_text, @"\n.*applicationId '.+'.*\n", "\n");
-                build_text = Regex.Replace(build_text, @"dependencies\s+\{[^\}]+\}", d => Regex.Replace(d.Value, @"(\s+)(compile)([^\n]+\n)", m => m.Groups[1].Value + "api" + m.Groups[3].Value));
-                build_text = Regex.Replace(build_text, @"dependencies\s+\{[^\}]+\}", d => Regex.Replace(d.Value, @"(\s+)(implementation)([^\n]+\n)", m => m.Groups[1].Value + "api" + m.Groups[3].Value));
+                build_text = Regex.Replace(build_text, @"dependencies\s+\{[^\}]+\}", d =>
+                {
+                    var value = d.Value;
+                    value = Regex.Replace(value, @"(\s+)(implementation project)([^\n]+)'([^\n]+)('[^\n]+)", m => m.Groups[1].Value + "api project(':" + m.Groups[4].Value + m.Groups[5].Value);
+                    value = Regex.Replace(value, @"(\s+)(compile)([^\n]+\n)", m => m.Groups[1].Value + "api" + m.Groups[3].Value);
+                    value = Regex.Replace(value, @"(\s+)(implementation)([^\n]+\n)", m => m.Groups[1].Value + "api" + m.Groups[3].Value);
+                    value = Regex.Replace(value, @"(\s+)api.+appcenter-release.+", m => m.Groups[1].Value + "api 'com.microsoft.appcenter:appcenter:+'");
+                    value = Regex.Replace(value, @"(\s+)api.+appcenter-analytics-release.+", m => m.Groups[1].Value + "api 'com.microsoft.appcenter:appcenter-analytics:+'");
+                    value = Regex.Replace(value, @"(\s+)api.+appcenter-crashes-release.+", m => m.Groups[1].Value + "api 'com.microsoft.appcenter:appcenter-crashes:+'");
+                    return value;
+                });
                 build_text = Regex.Replace(build_text, @"\s+bundle\s+\{\s+language\s+\{[^\}]+\}\s+density\s+\{[^\}]+\}\s+abi\s+\{[^\}]+\}\s+\}", string.Empty); // TODO: Why gradle 3.2.1 does not recognize this?
                 if (!Regex.IsMatch(build_text, @"buildscript[^\{]+\{[^\{]+repositories[^\{]+\{[^\}]+google\(\)[^\}]"))
                 {
@@ -148,12 +175,12 @@ public static class Build
             DeleteFolderContent(exportPath);
 
             EditorUserBuildSettings.wsaBuildAndRunDeployTarget = WSABuildAndRunDeployTarget.LocalMachine;
-            EditorUserBuildSettings.wsaGenerateReferenceProjects = true;
+            // EditorUserBuildSettings.wsaGenerateReferenceProjects = true;
             EditorUserBuildSettings.wsaSubtarget = WSASubtarget.PC;
             EditorUserBuildSettings.wsaUWPBuildType = WSAUWPBuildType.XAML;
             EditorUserBuildSettings.buildScriptsOnly = false;
             EditorUserBuildSettings.installInBuildFolder = false;
-            EditorUserBuildSettings.SetWSADotNetNative(WSABuildType.Master, false);
+            // EditorUserBuildSettings.SetWSADotNetNative(WSABuildType.Master, false);
 
             string oldScriptingDefines = PlayerSettings.GetScriptingDefineSymbolsForGroup(BuildTargetGroup.WSA);
             PlayerSettings.SetScriptingDefineSymbolsForGroup(BuildTargetGroup.WSA, oldScriptingDefines + ";UNITY_EXPORT");
@@ -182,7 +209,7 @@ public static class Build
         }
     }
 
-    static void Copy(string source, string destinationPath)
+    static void Copy(string source, string destinationPath, bool overwrite)
     {
         DeleteFolderContent(destinationPath);
 
@@ -194,7 +221,23 @@ public static class Build
 
         foreach (string newPath in Directory.GetFiles(source, "*.*",
             SearchOption.AllDirectories))
-            File.Copy(newPath, newPath.Replace(source, destinationPath), true);
+            File.Copy(newPath, newPath.Replace(source, destinationPath), overwrite);
+    }
+
+    static void CopyMerge(string source, string destinationPath, bool overwrite)
+    {
+        if (!Directory.Exists(destinationPath))
+            Directory.CreateDirectory(destinationPath);
+
+        foreach (string dirPath in Directory.GetDirectories(source, "*", SearchOption.AllDirectories))
+            CopyMerge(dirPath, dirPath.Replace(source, destinationPath), overwrite);
+
+        foreach (string newPath in Directory.GetFiles(source, "*.*", SearchOption.AllDirectories))
+        {
+            var destPath = newPath.Replace(source, destinationPath);
+            if (!File.Exists(destPath))
+                File.Copy(newPath, destPath, overwrite);
+        }
     }
 
     static string[] GetEnabledScenes()

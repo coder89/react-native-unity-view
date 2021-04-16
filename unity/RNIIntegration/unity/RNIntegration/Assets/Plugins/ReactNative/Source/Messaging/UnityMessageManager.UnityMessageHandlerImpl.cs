@@ -108,6 +108,8 @@ namespace ReactNative
 
                     if (!this.ResponseSent)
                     {
+                        Debug.LogWarning($"Missing request response: id={this.Message.id} type={this.Message.type} uuid={this.Message.uuid.Value}");
+
                         this.ResponseSent = true;
                         UnityMessageManager.SendResponse(
                             this.Message.id,

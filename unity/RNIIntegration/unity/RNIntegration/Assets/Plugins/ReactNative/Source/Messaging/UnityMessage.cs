@@ -33,7 +33,7 @@ namespace ReactNative
         /// <summary>
         /// Optional data of the message.
         /// </summary>
-        public DynamicJson data;
+        public dynamic data;
 
         /// <summary>
         /// Gets a boolean flag indicating whether this is a simple message (no response expected).
@@ -76,7 +76,7 @@ namespace ReactNative
         /// </summary>
         /// <typeparam name="T">The type to use for conversion.</typeparam>
         /// <returns>The data in a given type.</returns>
-        public T GetType<T>() where T: Enum
+        public T GetType<T>() where T : Enum
             => (T)Enum.ToObject(typeof(T), this.type);
 
         /// <summary>
@@ -85,7 +85,32 @@ namespace ReactNative
         /// <typeparam name="T">The type to use for conversion.</typeparam>
         /// <returns>The data in a given type.</returns>
         public T GetData<T>()
-            => this.data != null ? JSON.ToObject<T>(this.data) : default(T);
+            => this.data != null ? (T)JSON.ToObject(this.data, typeof(T)) : default(T);
+
+        /// <summary>
+        /// Tries to convert message data to a given type.
+        /// </summary>
+        /// <typeparam name="T">The type to use for conversion.</typeparam>
+        /// <param name="result">Result of the conversion</param>
+        /// <returns>Boolean flag indicating whether conversion was successfull.</returns>
+        public bool TryGetData<T>(out T result)
+        {
+            if (this.data != null)
+            {
+                try
+                {
+                    result = JSON.ToObject<T>(this.data);
+                    return true;
+                }
+                catch (Exception e)
+                {
+                    UnityEngine.Debug.LogError(e);
+                }
+            }
+
+            result = default(T);
+            return false;
+        }
 
         /// <summary>
         /// Converts message data to minimized JSON.

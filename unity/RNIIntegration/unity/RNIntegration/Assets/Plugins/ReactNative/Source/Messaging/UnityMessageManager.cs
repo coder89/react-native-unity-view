@@ -70,6 +70,10 @@ namespace ReactNative
         /// </summary>
         public static event MessageDelegate OnMessage;
 
+#if !UNITY_EXPORT || UNITY_EDITOR
+        public static event EventHandler<RoutedEventArgs<UnityMessage>> OnMessageSent;
+#endif
+
         #endregion
 
         #region Public methods
@@ -118,7 +122,7 @@ namespace ReactNative
         /// Raw message is automatically prefixed with <see cref="UnityMessageManager.MessagePrefix" /> 
         /// constant to distinguish it from unformatted messages.
         /// </remarks>
-        public static void Send(string id, IUnityResponse data)
+        public static void Send(string id, IUnityMessage data)
             => UnityMessageManager.SendPlainInternal(id, data.Type(), data);
 
         /// <summary>
@@ -259,38 +263,40 @@ namespace ReactNative
             => UnityMessageManager.instance?.InjectInternalAsync<T>(id, GetNextUUID(), type, data, cancellationToken);
         private async Task<T> InjectInternalAsync<T>(string id, int uuid, int type, object data, CancellationToken cancellationToken)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var awaiter = new TaskCompletionSource<UnityMessage>();
-            string json = UnityMessageManager.SerializeRequest(id, uuid, type, data);
-
-            cancellationToken.ThrowIfCancellationRequested();
-
-            try
+            return await Task.Run(async () =>
             {
-                this.AddOutboundRequest(uuid, awaiter);
-                SendRequestInternal(id, uuid, type, data); // Note: This will only print message to Unity Console
+                cancellationToken.ThrowIfCancellationRequested();
+                var awaiter = new TaskCompletionSource<UnityMessage>();
+                string json = UnityMessageManager.SerializeRequest(id, uuid, type, data);
 
-                UnityMessage unityMessage;
-                using (cancellationToken.Register(() => SendCancel(id, uuid)))
-                {
-                    this.onRNMessage(MessagePrefix + json);
-                    unityMessage = await awaiter.Task.ConfigureAwait(false);
-                }
+                cancellationToken.ThrowIfCancellationRequested();
 
-                if (typeof(T) == typeof(UnityMessage))
+                try
                 {
-                    return (T)Convert.ChangeType(unityMessage, typeof(UnityMessage));
+                    this.AddOutboundRequest(uuid, awaiter);
+                    SendRequestInternal(id, uuid, type, data); // Note: This will only print message to Unity Console
+
+                    UnityMessage unityMessage;
+                    using (cancellationToken.Register(() => SendCancel(id, uuid)))
+                    {
+                        this.onRNMessage(MessagePrefix + json);
+                        unityMessage = await awaiter.Task.ConfigureAwait(false);
+                    }
+
+                    if (typeof(T) == typeof(UnityMessage))
+                    {
+                        return (T)Convert.ChangeType(unityMessage, typeof(UnityMessage));
+                    }
+                    else
+                    {
+                        return unityMessage.GetData<T>();
+                    }
                 }
-                else
+                finally
                 {
-                    return unityMessage.GetData<T>();
+                    this.RemoveOutboundRequest(uuid);
                 }
-            }
-            finally
-            {
-                this.RemoveOutboundRequest(uuid);
-            }
+            }, cancellationToken);
         }
 #endif
         #endregion
@@ -691,6 +697,7 @@ namespace ReactNative
 #if DEBUG_MESSAGING
                 Debug.Log($"onUnityMessage[{unityMessage.uuid}]: {message}");
 #endif
+                UnityMessageManager.OnMessageSent?.Invoke(instance, unityMessage);
             }
         }
 #endif

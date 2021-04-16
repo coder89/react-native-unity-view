@@ -1,4 +1,6 @@
-﻿namespace ReactNative
+﻿using System;
+
+namespace ReactNative
 {
     /// <summary>
     /// Describes unity request entity.
@@ -11,6 +13,15 @@
     /// <summary>
     /// Describes unity request entity.
     /// </summary>
-    public interface IUnityRequest<T> : IUnityRequest
+    public interface IUnityRequest<out T> : IUnityRequest
     { }
+
+    /// <summary>
+    /// Describes unity request entity.
+    /// </summary>
+    public interface IUnityRequest<out TType, out TResponse> : IUnityRequest<TType>
+        where TType : Enum
+    {
+        new TType Type();
+    }
 }

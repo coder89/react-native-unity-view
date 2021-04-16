@@ -154,11 +154,11 @@ namespace fastJSON
             else if (obj is IEnumerable)
                 WriteArray((IEnumerable)obj);
 
+            else if (Reflection.Instance.IsTypeSerializerRegistered(obj.GetType()))
+                WriteCustom(obj);
+
             else if (obj is Enum)
                 WriteEnum((Enum)obj);
-
-            else if (Reflection.Instance.IsTypeRegistered(obj.GetType()))
-                WriteCustom(obj);
 
             else
                 WriteObject(obj);
@@ -244,7 +244,11 @@ namespace fastJSON
         {
             Serialize s;
             Reflection.Instance._customSerializer.TryGetValue(obj.GetType(), out s);
-            WriteStringFast(s(obj));
+            string str = s(obj);
+            if (str.StartsWith("{") && str.EndsWith("}") || str.StartsWith("\"") && str.EndsWith("\""))
+                WriteStringRaw(str);
+            else
+                WriteStringFast(str);
         }
 
         private void WriteEnum(Enum e)
@@ -691,6 +695,11 @@ namespace fastJSON
                 _output.Append(s, runIndex, s.Length - runIndex);
 
             _output.Append('\"');
+        }
+
+        private void WriteStringRaw(string s)
+        {
+            _output.Append(s);
         }
     }
 }

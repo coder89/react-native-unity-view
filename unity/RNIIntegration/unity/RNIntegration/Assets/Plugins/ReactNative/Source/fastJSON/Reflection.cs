@@ -148,7 +148,7 @@ namespace fastJSON
         internal SafeDictionary<Type, Serialize> _customSerializer = new SafeDictionary<Type, Serialize>();
         internal SafeDictionary<Type, Deserialize> _customDeserializer = new SafeDictionary<Type, Deserialize>();
 
-        internal object CreateCustom(string v, Type type)
+        internal object CreateCustom(object v, Type type)
         {
             Deserialize d;
             _customDeserializer.TryGetValue(type, out d);
@@ -157,21 +157,33 @@ namespace fastJSON
 
         internal void RegisterCustomType(Type type, Serialize serializer, Deserialize deserializer)
         {
-            if (type != null && serializer != null && deserializer != null)
+            if (type != null)
             {
-                _customSerializer.Add(type, serializer);
-                _customDeserializer.Add(type, deserializer);
+                if (serializer != null)
+                    _customSerializer.Add(type, serializer);
+                if (deserializer != null)
+                    _customDeserializer.Add(type, deserializer);
+
                 // reset property cache
-                Instance.ResetPropertyCache();
+                if (serializer != null || deserializer != null)
+                    Instance.ResetPropertyCache();
             }
         }
 
-        internal bool IsTypeRegistered(Type t)
+        internal bool IsTypeSerializerRegistered(Type t)
         {
             if (_customSerializer.Count == 0)
                 return false;
             Serialize s;
             return _customSerializer.TryGetValue(t, out s);
+        }
+
+        internal bool IsTypeDeserializerRegistered(Type t)
+        {
+            if (_customDeserializer.Count == 0)
+                return false;
+            Deserialize s;
+            return _customDeserializer.TryGetValue(t, out s);
         }
         #endregion
 
@@ -279,7 +291,8 @@ namespace fastJSON
             myPropInfo d = new myPropInfo();
             myPropInfoType d_type = myPropInfoType.Unknown;
 
-            if (t == typeof(int) || t == typeof(int?)) d_type = myPropInfoType.Int;
+            if (IsTypeDeserializerRegistered(t)) d_type = myPropInfoType.Custom;
+            else if(t == typeof(int) || t == typeof(int?)) d_type = myPropInfoType.Int;
             else if (t == typeof(long) || t == typeof(long?)) d_type = myPropInfoType.Long;
             else if (t == typeof(string)) d_type = myPropInfoType.String;
             else if (t == typeof(bool) || t == typeof(bool?)) d_type = myPropInfoType.Bool;
@@ -309,8 +322,6 @@ namespace fastJSON
             else if (t == typeof(DataSet)) d_type = myPropInfoType.DataSet;
             else if (t == typeof(DataTable)) d_type = myPropInfoType.DataTable;
 #endif
-            else if (IsTypeRegistered(t))
-                d_type = myPropInfoType.Custom;
 #if NET4
             else if (t.IsAssignableFrom(typeof(DynamicJson)))
                 d_type = myPropInfoType.Dynamic;
@@ -630,18 +641,27 @@ namespace fastJSON
             if (getMethod == null)
                 return null;
 
+            if (getMethod.IsStatic && type == getMethod.ReturnType)
+                return null;
+
             DynamicMethod getter = new DynamicMethod("_", typeof(object), new Type[] { typeof(object) }, type);
 
             ILGenerator il = getter.GetILGenerator();
 
             if (!type.IsClass) // structs
             {
-                var lv = il.DeclareLocal(type);
-                il.Emit(OpCodes.Ldarg_0);
-                il.Emit(OpCodes.Unbox_Any, type);
-                il.Emit(OpCodes.Stloc_0);
-                il.Emit(OpCodes.Ldloca_S, lv);
-                il.EmitCall(OpCodes.Call, getMethod, null);
+                if (!getMethod.IsStatic)
+                {
+                    var lv = il.DeclareLocal(type);
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(OpCodes.Unbox_Any, type);
+                    il.Emit(OpCodes.Stloc_0);
+                    il.Emit(OpCodes.Ldloca_S, lv);
+                    il.EmitCall(OpCodes.Call, getMethod, null);
+                }
+                else
+                    il.Emit(OpCodes.Call, getMethod);
+
                 if (propertyInfo.PropertyType.IsValueType)
                     il.Emit(OpCodes.Box, propertyInfo.PropertyType);
             }

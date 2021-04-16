@@ -18,7 +18,9 @@ using TypeR = System.Type;
 namespace fastJSON
 {
     public delegate string Serialize(object data);
-    public delegate object Deserialize(string data);
+    public delegate object Deserialize(object data);
+    public delegate string Serialize<T>(T data);
+    public delegate T Deserialize<T>(object data);
 
     public sealed class JSONParameters
     {
@@ -387,6 +389,15 @@ namespace fastJSON
             Reflection.Instance.RegisterCustomType(type, serializer, deserializer);
         }
         /// <summary>
+        /// Register custom type handlers for your own types not natively handled by fastJSON
+        /// </summary>
+        /// <param name="serializer"></param>
+        /// <param name="deserializer"></param>
+        public static void RegisterCustomType<T>(Serialize<T> serializer, Deserialize<T> deserializer)
+        {
+            Reflection.Instance.RegisterCustomType(typeof(T), (v) => serializer((T)v), (v) => deserializer(v));
+        }
+        /// <summary>
         /// Clear the internal reflection cache so you can start from new (you will loose performance)
         /// </summary>
         public static void ClearReflectionCache()
@@ -565,17 +576,17 @@ namespace fastJSON
             else if (conversionType == typeof(string))
                 return (string)value;
 
-            else if (conversionType.Convert().IsEnum)
-                return CreateEnum(conversionType, value);
-
             else if (conversionType == typeof(DateTime))
                 return CreateDateTime((string)value);
 
             else if (conversionType == typeof(DateTimeOffset))
                 return CreateDateTimeOffset((string)value);
 
-            else if (Reflection.Instance.IsTypeRegistered(conversionType))
-                return Reflection.Instance.CreateCustom((string)value, conversionType);
+            else if (Reflection.Instance.IsTypeDeserializerRegistered(conversionType))
+                return Reflection.Instance.CreateCustom(value, conversionType);
+
+            else if (conversionType.Convert().IsEnum)
+                return CreateEnum(conversionType, value);
 
             // 8-30-2014 - James Brooks - Added code for nullable types.
             if (IsNullable(conversionType))
@@ -770,6 +781,8 @@ namespace fastJSON
                 return CreateNV(d);
             if (type == typeof(StringDictionary))
                 return CreateSD(d);
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
+                return this.ParseDictionary(d, globaltypes, Nullable.GetUnderlyingType(type), input);
 
             if (d.TryGetValue("$i", out tn))
             {
@@ -892,7 +905,7 @@ namespace fastJSON
                             case myPropInfoType.StringKeyDictionary: oset = CreateStringKeyDictionary((Dictionary<string, object>)v, pi.pt, pi.GenericTypes, globaltypes); break;
                             case myPropInfoType.NameValue: oset = CreateNV((Dictionary<string, object>)v); break;
                             case myPropInfoType.StringDictionary: oset = CreateSD((Dictionary<string, object>)v); break;
-                            case myPropInfoType.Custom: oset = Reflection.Instance.CreateCustom((string)v, pi.pt); break;
+                            case myPropInfoType.Custom: oset = Reflection.Instance.CreateCustom(v, pi.pt); break;
                             case myPropInfoType.Dynamic: oset = new DynamicJson(v); break;
                             default:
                                 {
