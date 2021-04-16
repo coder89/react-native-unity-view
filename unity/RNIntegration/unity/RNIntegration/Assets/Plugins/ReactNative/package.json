@@ -1,0 +1,16 @@
+{
+  "name": "com.unity.modules.reactnative",
+  "displayName": "ReactNative bridge for Unity",
+  "version": "1.2.0",
+  "unity": "2020.3",
+  "description": "",
+  "keywords": [
+    "react",
+    "react-native"
+  ],
+  "dependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:coder89/react-native-unity-view.git"
+  }
+}
