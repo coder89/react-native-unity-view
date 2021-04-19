@@ -17,6 +17,8 @@ public static class ScenePreprocessor
 
             if (isUnityExport)
             {
+                Debug.Log("Building Unity Export");
+
                 foreach (GameObject obj in GameObject.FindGameObjectsWithTag("StandaloneOnly"))
                 {
                     if (obj && !AssetDatabase.Contains(obj))
@@ -24,6 +26,10 @@ public static class ScenePreprocessor
                         Object.DestroyImmediate(obj);
                     }
                 }
+            }
+            else
+            {
+                Debug.Log("Building Standalone");
             }
         }
     }

@@ -37,18 +37,18 @@ public static class Build
             DeleteFolderContent(exportPath);
 
             EditorUserBuildSettings.androidBuildSystem = AndroidBuildSystem.Gradle;
+            EditorUserBuildSettings.exportAsGoogleAndroidProject = true;
 
             string oldScriptingDefines = PlayerSettings.GetScriptingDefineSymbolsForGroup(BuildTargetGroup.Android);
             PlayerSettings.SetScriptingDefineSymbolsForGroup(BuildTargetGroup.Android, oldScriptingDefines + ";UNITY_EXPORT");
 
             try
             {
-                var options = BuildOptions.AcceptExternalModificationsToPlayer;
                 var report = BuildPipeline.BuildPlayer(
                     GetEnabledScenes(),
                     apkPath,
                     BuildTarget.Android,
-                    options);
+                    0);
 
                 if (report.summary.result != BuildResult.Succeeded)
                     throw new Exception("Build failed");
