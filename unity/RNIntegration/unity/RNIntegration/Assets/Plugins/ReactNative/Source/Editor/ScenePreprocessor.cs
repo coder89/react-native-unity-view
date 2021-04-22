@@ -5,7 +5,7 @@ using UnityEngine;
 
 public static class ScenePreprocessor
 {
-    [PostProcessSceneAttribute(0)]
+    [PostProcessScene(0)]
     public static void OnPostprocessScene()
     {
         if (BuildPipeline.isBuildingPlayer && !Application.isPlaying && Build.CurrentGroup.HasValue)

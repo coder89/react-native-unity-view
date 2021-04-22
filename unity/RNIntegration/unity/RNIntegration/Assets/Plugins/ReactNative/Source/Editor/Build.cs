@@ -30,6 +30,7 @@ public static class Build
             CurrentGroup = BuildTargetGroup.Android;
 
             string exportPath = Path.GetFullPath(Path.Combine(ProjectPath, "../../android/UnityExport"));
+            string buildPath = apkPath;
 
             if (Directory.Exists(apkPath))
                 Directory.Delete(apkPath, true);
@@ -48,63 +49,72 @@ public static class Build
                     GetEnabledScenes(),
                     apkPath,
                     BuildTarget.Android,
-                    0);
+                    BuildOptions.AllowDebugging);
 
                 if (report.summary.result != BuildResult.Succeeded)
                     throw new Exception("Build failed");
 
-                string buildPath = Path.Combine(apkPath, Application.productName);
-                if (Directory.Exists(buildPath))
-                {
-                    Copy(buildPath, exportPath, true);
-                }
-                else
-                {
-                    buildPath = Path.Combine(apkPath, "unityLibrary");
-                    if (Directory.Exists(buildPath))
-                    {
-                        Copy(buildPath, exportPath, true);
+                // Copy build output from UnityExport
+                CopyDirectory(
+                    buildPath,
+                    exportPath,
+                    mergeDirectories: false,
+                    overwriteFiles: true);
 
-                        string resourcesPath = Path.Combine(apkPath, "launcher");
-                        CopyMerge(resourcesPath, exportPath, false);
-                    }
-                    else
-                    {
-                        throw new Exception("Build failed - cannot find output files!");
-                    }
-                }
+                // Copy gradle.properties
+                CopyFile(
+                    Path.Combine(exportPath, "gradle.properties"),
+                    Path.Combine(exportPath, "unityLibrary/gradle.properties"),
+                    overwriteFiles: true);
+
+                // Copy some files from 'launcher' project
+                CopyDirectory(
+                    Path.Combine(exportPath, "launcher/src/main/res"),
+                    Path.Combine(exportPath, "unityLibrary/src/main/res"),
+                    mergeDirectories: true,
+                    overwriteFiles: true);
 
                 // Modify build.gradle
-                var build_file = Path.Combine(exportPath, "build.gradle");
-                var build_text = File.ReadAllText(build_file);
-                build_text = build_text.Replace("com.android.application", "com.android.library");
-                build_text = Regex.Replace(build_text, @"com.android.tools.build:gradle:[0-9\.]+", "com.android.tools.build:gradle:3.2.1");
-                build_text = Regex.Replace(build_text, @"\n.*applicationId '.+'.*\n", "\n");
-                build_text = Regex.Replace(build_text, @"dependencies\s+\{[^\}]+\}", d =>
                 {
-                    var value = d.Value;
-                    value = Regex.Replace(value, @"(\s+)(implementation project)([^\n]+)'([^\n]+)('[^\n]+)", m => m.Groups[1].Value + "api project(':" + m.Groups[4].Value + m.Groups[5].Value);
-                    value = Regex.Replace(value, @"(\s+)(compile)([^\n]+\n)", m => m.Groups[1].Value + "api" + m.Groups[3].Value);
-                    value = Regex.Replace(value, @"(\s+)(implementation)([^\n]+\n)", m => m.Groups[1].Value + "api" + m.Groups[3].Value);
-                    value = Regex.Replace(value, @"(\s+)api.+appcenter-release.+", m => m.Groups[1].Value + "api 'com.microsoft.appcenter:appcenter:+'");
-                    value = Regex.Replace(value, @"(\s+)api.+appcenter-analytics-release.+", m => m.Groups[1].Value + "api 'com.microsoft.appcenter:appcenter-analytics:+'");
-                    value = Regex.Replace(value, @"(\s+)api.+appcenter-crashes-release.+", m => m.Groups[1].Value + "api 'com.microsoft.appcenter:appcenter-crashes:+'");
-                    return value;
-                });
-                build_text = Regex.Replace(build_text, @"\s+bundle\s+\{\s+language\s+\{[^\}]+\}\s+density\s+\{[^\}]+\}\s+abi\s+\{[^\}]+\}\s+\}", string.Empty); // TODO: Why gradle 3.2.1 does not recognize this?
-                if (!Regex.IsMatch(build_text, @"buildscript[^\{]+\{[^\{]+repositories[^\{]+\{[^\}]+google\(\)[^\}]"))
-                {
-                    build_text = Regex.Replace(build_text, @"(buildscript[^\{]+\{[^\{]+repositories[^\{]+\{)([^\}]+)\n([^\n]+\})", d =>
+                    var launcher_build_file = Path.Combine(exportPath, "launcher/build.gradle");
+                    var launcher_build_text = File.ReadAllText(launcher_build_file);
+
+                    var build_file = Path.Combine(exportPath, "unityLibrary/build.gradle");
+                    var build_text = File.ReadAllText(build_file);
+                    build_text = build_text.Replace("com.android.application", "com.android.library");
+                    build_text = Regex.Replace(build_text, @"\n.*applicationId '.+'.*\n", "\n");
+                    build_text = Regex.Replace(build_text, @":unityLibrary", ":UnityExport");
+                    build_text = Regex.Replace(build_text, @"dependencies\s+\{[^\}]+\}", d =>
                     {
-                        var repos = d.Groups[2].Value.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries).ToList();
-                        repos.Add(Regex.Replace(repos[0], @"[a-zA-Z0-9]+", @"google"));
-                        return d.Groups[1].Value + "\n" + string.Join("\n", repos) + "\n" + d.Groups[3].Value;
+                        var value = d.Value;
+                        value = Regex.Replace(value, @"(\s+)(implementation project)([^\n]+)'([^\n]+)('[^\n]+)", m => m.Groups[1].Value + "api project(':" + m.Groups[4].Value + m.Groups[5].Value);
+                        value = Regex.Replace(value, @"(\s+)(compile)([^\n]+\n)", m => m.Groups[1].Value + "api" + m.Groups[3].Value);
+                        value = Regex.Replace(value, @"(\s+)(implementation)([^\n]+\n)", m => m.Groups[1].Value + "api" + m.Groups[3].Value);
+                        value = Regex.Replace(value, @"(\s+)api.+appcenter-release.+", m => m.Groups[1].Value + "api 'com.microsoft.appcenter:appcenter:+'");
+                        value = Regex.Replace(value, @"(\s+)api.+appcenter-analytics-release.+", m => m.Groups[1].Value + "api 'com.microsoft.appcenter:appcenter-analytics:+'");
+                        value = Regex.Replace(value, @"(\s+)api.+appcenter-crashes-release.+", m => m.Groups[1].Value + "api 'com.microsoft.appcenter:appcenter-crashes:+'");
+                        return value;
                     });
+
+                    build_text = CopyGradleBlock(
+                        launcher_build_text,
+                        build_text,
+                        @"(\s+aaptOptions\s+\{[^\}]+\})",
+                        @"(android\s+\{)(([^\}]+)+)",
+                        overwrite: false);
+
+                    build_text = CopyGradleBlock(
+                        launcher_build_text,
+                        build_text,
+                        @"(\s+buildTypes\s+\{([^\{\}]+\{[^\{\}]+\}[^\{\}]+)+\})",
+                        @"(android\s+\{)(([^\}]+)+)",
+                        overwrite: false);
+
+                    File.WriteAllText(build_file, build_text);
                 }
-                File.WriteAllText(build_file, build_text);
 
                 // Modify AndroidManifest.xml
-                var manifest_file = Path.Combine(exportPath, "src/main/AndroidManifest.xml");
+                var manifest_file = Path.Combine(exportPath, "unityLibrary/src/main/AndroidManifest.xml");
                 var manifest_text = File.ReadAllText(manifest_file);
                 manifest_text = Regex.Replace(manifest_text, @"\s*<uses-sdk[^>]*/>", "");
                 manifest_text = Regex.Replace(manifest_text, @"<application .*>", "<application>");
@@ -209,46 +219,71 @@ public static class Build
         }
     }
 
-    static void Copy(string source, string destinationPath, bool overwrite)
+    private static void CopyDirectory(
+        string sourcePath,
+        string destinationPath,
+        bool mergeDirectories = false,
+        bool overwriteFiles = true)
     {
-        DeleteFolderContent(destinationPath);
-
-        Directory.CreateDirectory(destinationPath);
-
-        foreach (string dirPath in Directory.GetDirectories(source, "*",
-            SearchOption.AllDirectories))
-            Directory.CreateDirectory(dirPath.Replace(source, destinationPath));
-
-        foreach (string newPath in Directory.GetFiles(source, "*.*",
-            SearchOption.AllDirectories))
-            File.Copy(newPath, newPath.Replace(source, destinationPath), overwrite);
-    }
-
-    static void CopyMerge(string source, string destinationPath, bool overwrite)
-    {
-        if (!Directory.Exists(destinationPath))
-            Directory.CreateDirectory(destinationPath);
-
-        foreach (string dirPath in Directory.GetDirectories(source, "*", SearchOption.AllDirectories))
-            CopyMerge(dirPath, dirPath.Replace(source, destinationPath), overwrite);
-
-        foreach (string newPath in Directory.GetFiles(source, "*.*", SearchOption.AllDirectories))
+        if (!mergeDirectories && Directory.Exists(destinationPath))
         {
-            var destPath = newPath.Replace(source, destinationPath);
-            if (!File.Exists(destPath))
-                File.Copy(newPath, destPath, overwrite);
+            DeleteFolderContent(destinationPath);
+        }
+
+        if (!Directory.Exists(destinationPath))
+        {
+            Directory.CreateDirectory(destinationPath);
+        }
+
+        foreach (string dirPath in Directory.GetDirectories(sourcePath, "*", SearchOption.AllDirectories))
+        {
+            var newDirectoryPath = dirPath.Replace(sourcePath, destinationPath);
+
+            if (!Directory.Exists(newDirectoryPath))
+            {
+                Directory.CreateDirectory(newDirectoryPath);
+            }
+        }
+
+        foreach (string srcFilePath in Directory.GetFiles(sourcePath, "*.*", SearchOption.AllDirectories))
+        {
+            var destFilePath = srcFilePath.Replace(sourcePath, destinationPath);
+            CopyFile(srcFilePath, destFilePath, overwriteFiles);
         }
     }
 
-    static string[] GetEnabledScenes()
+    private static void CopyFile(
+        string sourcePath,
+        string destinationPath,
+        bool overwriteFiles = true)
     {
-        var scenes = EditorBuildSettings.scenes
+        File.Copy(sourcePath, destinationPath, overwriteFiles);
+    }
+
+    private static string CopyGradleBlock(
+        string sourceGradleText,
+        string destinationGradleText,
+        string sourceRegex,
+        string destinationRegex,
+        bool overwrite)
+    {
+        var m = Regex.Match(sourceGradleText, sourceRegex);
+        if (m.Success && (overwrite || !Regex.IsMatch(destinationGradleText, sourceRegex)))
+        {
+            return Regex.Replace(destinationGradleText, destinationRegex, d =>
+            {
+                return d.Groups[1].Value + m.Groups[1].Value + d.Groups[2].Value;
+            });
+        }
+
+        return destinationGradleText;
+    }
+
+    private static string[] GetEnabledScenes()
+        => EditorBuildSettings.scenes
             .Where(s => s.enabled)
             .Select(s => s.path)
             .ToArray();
-
-        return scenes;
-    }
 
     private static void DeleteFolderContent(string path)
     {
