@@ -1,6 +1,6 @@
-﻿// #define DEBUG_MESSAGING
+﻿#define DEBUG_MESSAGING
 
-using fastJSON;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -442,7 +442,7 @@ namespace ReactNative
                 message = message.Substring(MessagePrefix.Length);
 
                 Subscription[] subscriptionList;
-                UnityMessage unityMessage = JSON.ToObject<UnityMessage>(message);
+                UnityMessage unityMessage = JsonConvert.DeserializeObject<UnityMessage>(message);
                 if (unityMessage.IsRequestCompletion)
                 {
                     // Handle as request response/error/cancellation
@@ -677,7 +677,7 @@ namespace ReactNative
 
             message = message.Substring(MessagePrefix.Length);
 
-            UnityMessage unityMessage = JSON.ToObject<UnityMessage>(message);
+            UnityMessage unityMessage = JsonConvert.DeserializeObject<UnityMessage>(message);
             if (unityMessage.IsRequestCompletion)
             {
 #if DEBUG_MESSAGING
@@ -710,9 +710,9 @@ namespace ReactNative
         private static string SerializeMessage(string id, object data)
         {
             string json = "{" +
-                $"\"{nameof(UnityMessage.id)}\":{JSON.ToJSON(id)}" +
+                $"\"{nameof(UnityMessage.id)}\":{JsonConvert.SerializeObject(id)}" +
                 (data != null
-                    ? $",\"{nameof(UnityMessage.data)}\":{JSON.ToJSON(data)}"
+                    ? $",\"{nameof(UnityMessage.data)}\":{JsonConvert.SerializeObject(data)}"
                     : string.Empty) +
                 "}";
 
@@ -728,10 +728,10 @@ namespace ReactNative
         private static string SerializeMessage(string id, int type, object data)
         {
             string json = "{" +
-                $"\"{nameof(UnityMessage.id)}\":{JSON.ToJSON(id)}" +
+                $"\"{nameof(UnityMessage.id)}\":{JsonConvert.SerializeObject(id)}" +
                 $",\"{nameof(UnityMessage.type)}\":{type}" +
                 (data != null
-                    ? $",\"{nameof(UnityMessage.data)}\":{JSON.ToJSON(data)}"
+                    ? $",\"{nameof(UnityMessage.data)}\":{JsonConvert.SerializeObject(data)}"
                     : string.Empty) +
                 "}";
 
@@ -748,11 +748,11 @@ namespace ReactNative
         private static string SerializeRequest(string id, int uuid, int type, object data)
         {
             string json = "{" +
-                $"\"{nameof(UnityMessage.id)}\":{JSON.ToJSON(id)}" +
+                $"\"{nameof(UnityMessage.id)}\":{JsonConvert.SerializeObject(id)}" +
                 $",\"{nameof(UnityMessage.type)}\":{type}" +
                 $",\"{nameof(UnityMessage.uuid)}\":{uuid}" +
                 (data != null
-                    ? $",\"{nameof(UnityMessage.data)}\":{JSON.ToJSON(data)}"
+                    ? $",\"{nameof(UnityMessage.data)}\":{JsonConvert.SerializeObject(data)}"
                     : string.Empty) +
                 "}";
 
@@ -807,11 +807,11 @@ namespace ReactNative
         private static void SendResponse(string id, int uuid, object data)
         {
             string json = "{" +
-                $"\"{nameof(UnityMessage.id)}\":{JSON.ToJSON(id)}" +
+                $"\"{nameof(UnityMessage.id)}\":{JsonConvert.SerializeObject(id)}" +
                 $",\"{nameof(UnityMessage.type)}\":{(int)UnityMessageType.Response}" +
                 $",\"{nameof(UnityMessage.uuid)}\":{uuid}" +
                 (data != null
-                    ? $",\"{nameof(UnityMessage.data)}\":{JSON.ToJSON(data)}"
+                    ? $",\"{nameof(UnityMessage.data)}\":{JsonConvert.SerializeObject(data)}"
                     : string.Empty) +
                 "}";
 
@@ -826,7 +826,7 @@ namespace ReactNative
         private static void SendCancel(string id, int uuid)
         {
             string json = "{" +
-                $"\"{nameof(UnityMessage.id)}\":{JSON.ToJSON(id)}" +
+                $"\"{nameof(UnityMessage.id)}\":{JsonConvert.SerializeObject(id)}" +
                 $",\"{nameof(UnityMessage.type)}\":{(int)UnityMessageType.Cancel}" +
                 $",\"{nameof(UnityMessage.uuid)}\":{uuid}" +
                 "}";
@@ -842,7 +842,7 @@ namespace ReactNative
         private static void SendCanceled(string id, int uuid)
         {
             string json = "{" +
-                $"\"{nameof(UnityMessage.id)}\":{JSON.ToJSON(id)}" +
+                $"\"{nameof(UnityMessage.id)}\":{JsonConvert.SerializeObject(id)}" +
                 $",\"{nameof(UnityMessage.type)}\":{(int)UnityMessageType.Canceled}" +
                 $",\"{nameof(UnityMessage.uuid)}\":{uuid}" +
                 "}";
@@ -859,11 +859,11 @@ namespace ReactNative
         private static void SendError(string id, int uuid, Exception error)
         {
             string json = "{" +
-                $"\"{nameof(UnityMessage.id)}\":{JSON.ToJSON(id)}" +
+                $"\"{nameof(UnityMessage.id)}\":{JsonConvert.SerializeObject(id)}" +
                 $",\"{nameof(UnityMessage.type)}\":{(int)UnityMessageType.Error}" +
                 $",\"{nameof(UnityMessage.uuid)}\":{uuid}" +
                 (error != null
-                    ? $",\"{nameof(UnityMessage.data)}\":{JSON.ToJSON(error)}"
+                    ? $",\"{nameof(UnityMessage.data)}\":{JsonConvert.SerializeObject(error)}"
                     : string.Empty) +
                 "}";
 

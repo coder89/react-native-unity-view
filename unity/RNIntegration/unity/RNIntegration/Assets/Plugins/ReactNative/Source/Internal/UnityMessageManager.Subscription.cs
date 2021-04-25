@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 
 namespace ReactNative
 {
@@ -20,16 +21,7 @@ namespace ReactNative
 
             public void Dispose()
             {
-                lock (this)
-                {
-                    var handler = this.unsubscription;
-                    this.unsubscription = null;
-
-                    if (handler != null)
-                    {
-                        handler.Invoke(this);
-                    }
-                }
+                Interlocked.Exchange(ref this.unsubscription, null)?.Invoke(this);
             }
         }
     }

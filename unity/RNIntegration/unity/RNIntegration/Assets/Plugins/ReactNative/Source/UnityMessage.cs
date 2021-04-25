@@ -1,4 +1,4 @@
-﻿using fastJSON;
+﻿using Newtonsoft.Json.Linq;
 using System;
 
 namespace ReactNative
@@ -33,7 +33,7 @@ namespace ReactNative
         /// <summary>
         /// Optional data of the message.
         /// </summary>
-        public dynamic data;
+        public JObject data;
 
         /// <summary>
         /// Gets a boolean flag indicating whether this is a simple message (no response expected).
@@ -85,7 +85,7 @@ namespace ReactNative
         /// <typeparam name="T">The type to use for conversion.</typeparam>
         /// <returns>The data in a given type.</returns>
         public T GetData<T>()
-            => this.data != null ? (T)JSON.ToObject(this.data, typeof(T)) : default(T);
+            => default;// TODO this.data != null ? (T)JSON.ToObject(this.data, typeof(T)) : default(T);
 
         /// <summary>
         /// Tries to convert message data to a given type.
@@ -95,18 +95,19 @@ namespace ReactNative
         /// <returns>Boolean flag indicating whether conversion was successfull.</returns>
         public bool TryGetData<T>(out T result)
         {
-            if (this.data != null)
-            {
-                try
-                {
-                    result = JSON.ToObject<T>(this.data);
-                    return true;
-                }
-                catch (Exception e)
-                {
-                    UnityEngine.Debug.LogError(e);
-                }
-            }
+            // TODO
+            //if (this.data != null)
+            //{
+            //    try
+            //    {
+            //        result = JSON.ToObject<T>(this.data);
+            //        return true;
+            //    }
+            //    catch (Exception e)
+            //    {
+            //        UnityEngine.Debug.LogError(e);
+            //    }
+            //}
 
             result = default(T);
             return false;
@@ -125,7 +126,7 @@ namespace ReactNative
         /// <returns>The message in formatted JSON.</returns>
         public string ToString(bool formatted)
             => ToStringInternal(
-                formatted ? JSON.ToNiceJSON : (Func<object, string>)JSON.ToJSON,
+                (o) => string.Empty, // TODO formatted ? JSON.ToNiceJSON : (Func<object, string>)JSON.ToJSON,
                 new
                 {
                     this.id,

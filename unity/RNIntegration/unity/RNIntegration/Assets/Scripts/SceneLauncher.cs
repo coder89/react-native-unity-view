@@ -1,4 +1,5 @@
-﻿using ReactNative;
+﻿using Newtonsoft.Json.Linq;
+using ReactNative;
 using System;
 using UnityEngine;
 
@@ -9,24 +10,24 @@ public class SceneLauncher : MonoBehaviour
 
     void Awake()
     {
-        UnityMessageManager.Send("launcher", new JsonObject { ["state"] = "awake" });
+        UnityMessageManager.Send("launcher", new JObject { { "state", "awake" } });
     }
 
     void OnEnable()
     {
         UnityMessageManager.OnMessage += this.OnReceiveMessage;
         this.subscription = UnityMessageManager.Subscribe("launcher", this.OnReceiveMessage);
-        UnityMessageManager.Send("launcher", new JsonObject { ["state"] = "enable" });
+        UnityMessageManager.Send("launcher", new JObject { { "state", "enable" } });
     }
 
     void Start()
     {
-        UnityMessageManager.Send("launcher", new JsonObject { ["state"] = "start" });
+        UnityMessageManager.Send("launcher", new JObject { { "state", "start" } });
     }
 
     void OnDisable()
     {
-        UnityMessageManager.Send("launcher", new JsonObject { ["state"] = "disable" });
+        UnityMessageManager.Send("launcher", new JObject { { "state", "disable" } });
         UnityMessageManager.OnMessage -= this.OnReceiveMessage;
         this.subscription?.Dispose();
         this.subscription = null;

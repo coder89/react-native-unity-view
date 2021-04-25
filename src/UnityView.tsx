@@ -1,5 +1,5 @@
 import * as React from "react";
-import { requireNativeComponent, ViewProperties, View } from 'react-native';
+import { requireNativeComponent, ViewProps, View } from 'react-native';
 import * as PropTypes from "prop-types";
 import { ViewPropTypes } from 'react-native';
 import { UnityMessageHandler, UnityMessageHandlerImpl } from "./UnityMessageHandler";
@@ -8,7 +8,7 @@ import { UnityMessageType, UnityMessage } from "./UnityMessage";
 import { IUnityRequest } from "./UnityRequest";
 import { Observable } from "rxjs";
 
-export interface UnityViewProps extends ViewProperties {
+export interface UnityViewProps extends ViewProps {
     /** 
      * Receive plain text message from unity. 
      */
@@ -99,4 +99,4 @@ export default class UnityView extends React.Component<UnityViewProps> {
     }
 }
 
-const NativeUnityView = requireNativeComponent('UnityView');
+const NativeUnityView = requireNativeComponent<UnityViewProps>('UnityView');
