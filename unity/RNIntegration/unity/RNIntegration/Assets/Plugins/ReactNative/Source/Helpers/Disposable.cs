@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections;
 using System.Threading;
+using UnityEngine.Scripting;
 
 namespace ReactNative
 {
+    [Preserve]
     public sealed class Disposable : IDisposable
     {
         private Action disposeAction;

@@ -1,11 +1,13 @@
 ﻿using Newtonsoft.Json.Linq;
 using System;
+using UnityEngine.Scripting;
 
 namespace ReactNative
 {
     /// <summary>
     /// Describes unity message entity.
     /// </summary>
+    [Preserve]
     public struct UnityMessage
     {
         /// <summary>
@@ -85,7 +87,7 @@ namespace ReactNative
         /// <typeparam name="T">The type to use for conversion.</typeparam>
         /// <returns>The data in a given type.</returns>
         public T GetData<T>()
-            => default;// TODO this.data != null ? (T)JSON.ToObject(this.data, typeof(T)) : default(T);
+            => this.data != null ? this.data.ToObject<T>() : default(T);
 
         /// <summary>
         /// Tries to convert message data to a given type.
@@ -95,19 +97,18 @@ namespace ReactNative
         /// <returns>Boolean flag indicating whether conversion was successfull.</returns>
         public bool TryGetData<T>(out T result)
         {
-            // TODO
-            //if (this.data != null)
-            //{
-            //    try
-            //    {
-            //        result = JSON.ToObject<T>(this.data);
-            //        return true;
-            //    }
-            //    catch (Exception e)
-            //    {
-            //        UnityEngine.Debug.LogError(e);
-            //    }
-            //}
+            if (this.data != null)
+            {
+                try
+                {
+                    result = this.data.ToObject<T>();
+                    return true;
+                }
+                catch (Exception e)
+                {
+                    UnityEngine.Debug.unityLogger.LogError("messaging", e);
+                }
+            }
 
             result = default(T);
             return false;

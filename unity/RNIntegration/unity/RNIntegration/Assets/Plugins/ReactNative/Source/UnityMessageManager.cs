@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Scripting;
 
 namespace ReactNative
 {
@@ -14,6 +15,7 @@ namespace ReactNative
 
     public delegate void UnityMessageDelegate(IUnityMessageHandler handler);
 
+    [Preserve]
     public sealed partial class UnityMessageManager : MonoBehaviour
     {
         #region Constants
@@ -421,6 +423,7 @@ namespace ReactNative
         /// Handles message forwarding it to all 
         /// </summary>
         /// <param name="message"></param>
+        [Preserve]
         private void onMessage(string message)
             => UnityMessageManager.OnMessage?.Invoke(message);
 
@@ -429,13 +432,14 @@ namespace ReactNative
         /// Message will be dispatched only to listeners of a given <see cref="UnityMessage.id" />.
         /// </summary>
         /// <param name="message">The JSON message.</param>
+        [Preserve]
         private void onRNMessage(string message)
         {
             try
             {
                 if (!message.StartsWith(MessagePrefix))
                 {
-                    Debug.LogWarning("Invalid message format.");
+                    Debug.unityLogger.LogWarning("messaging", $"Invalid message format.");
                     return;
                 }
 
@@ -479,7 +483,7 @@ namespace ReactNative
                                 }
                                 catch (Exception e)
                                 {
-                                    Debug.LogError($"Failed to handle incoming message:\n{e}", this);
+                                    Debug.unityLogger.LogError("messaging", $"Failed to handle incoming message:\n{e}", this);
 
                                     if (args.IsRequest && !args.IsDeferred && !args.ResponseSent)
                                     {
@@ -494,7 +498,7 @@ namespace ReactNative
                                     args.SendError(new ArgumentException("Invalid message ID.", nameof(UnityMessage.id)));
                                 }
 
-                                Debug.LogError($"Unknown message id: {unityMessage.id}.", this);
+                                Debug.unityLogger.LogError("messaging", $"Unknown message id: {unityMessage.id}.", this);
                             }
                         }
                         finally
@@ -509,7 +513,7 @@ namespace ReactNative
             }
             catch (Exception e)
             {
-                Debug.LogError($"Failed to parse incoming message:\n{e}", this);
+                Debug.unityLogger.LogError("messaging", $"Failed to parse incoming message:\n{e}", this);
             }
         }
 
@@ -598,12 +602,12 @@ namespace ReactNative
                     }
                     else
                     {
-                        Debug.LogError($"Unknown response message type: {unityMessage.type}", instance);
+                        Debug.unityLogger.LogError("messaging", $"Unknown response message type: {unityMessage.type}", instance);
                     }
                 }
                 else
                 {
-                    Debug.LogError($"Unknown outbound request uuid: {unityMessage.uuid}", instance);
+                    Debug.unityLogger.LogError("messaging", $"Unknown outbound request uuid: {unityMessage.uuid}", instance);
                 }
             }
         }
@@ -625,7 +629,7 @@ namespace ReactNative
                 }
                 else
                 {
-                    Debug.LogError($"Unknown incomming request uuid: {uuid}", this);
+                    Debug.unityLogger.LogError("messaging", $"Unknown incomming request uuid: {uuid}", this);
                 }
             }
         }
@@ -650,7 +654,7 @@ namespace ReactNative
             }
             catch (Exception e)
             {
-                Debug.LogException(e);
+                Debug.unityLogger.LogException(e);
             }
         }
 #elif UNITY_WSA && ENABLE_WINMD_SUPPORT
@@ -661,7 +665,7 @@ namespace ReactNative
 #else
         private static void onUnityMessage(string message)
         {
-            Debug.Log("onUnityMessage: " + message);
+            Debug.unityLogger.Log("messaging", $"Plain: {message}");
         }
 #endif
 #else
@@ -670,7 +674,7 @@ namespace ReactNative
             if (!message.StartsWith(MessagePrefix))
             {
 #if DEBUG_MESSAGING
-                Debug.Log("Unformatted: " + message);
+                Debug.unityLogger.Log("messaging", $"Unknown type: {message}");
 #endif
                 return;
             }
@@ -681,21 +685,21 @@ namespace ReactNative
             if (unityMessage.IsRequestCompletion)
             {
 #if DEBUG_MESSAGING
-                Debug.Log($"onResponse[{unityMessage.uuid}]: {message}");
+                Debug.unityLogger.Log("messaging", $"response[{unityMessage.uuid}] {message}");
 #endif
                 instance?.TryResolveRequest(unityMessage);
             }
             else if (unityMessage.IsCancel)
             {
 #if DEBUG_MESSAGING
-                Debug.Log($"onCancel[{unityMessage.uuid}]: {message}");
+                Debug.unityLogger.Log("messaging", $"cancel[{unityMessage.uuid}] {message}");
 #endif
                 instance?.TryCancelRequest(unityMessage);
             }
             else
             {
 #if DEBUG_MESSAGING
-                Debug.Log($"onUnityMessage[{unityMessage.uuid}]: {message}");
+                Debug.unityLogger.Log("messaging", $"request[{unityMessage.uuid}] {message}");
 #endif
                 UnityMessageManager.OnMessageSent?.Invoke(instance, unityMessage);
             }

@@ -1,12 +1,14 @@
 import * as React from "react";
-import { requireNativeComponent, ViewProps, View } from 'react-native';
+import { NativeModules, requireNativeComponent, ViewProps, View } from 'react-native';
 import * as PropTypes from "prop-types";
-import { ViewPropTypes } from 'react-native';
+const { ViewPropTypes } = require('react-native');
 import { UnityMessageHandler, UnityMessageHandlerImpl } from "./UnityMessageHandler";
 import { UnityModule } from "./UnityModule";
 import { UnityMessageType, UnityMessage } from "./UnityMessage";
 import { IUnityRequest } from "./UnityRequest";
 import { Observable } from "rxjs";
+
+const { UIManager } = NativeModules;
 
 export interface UnityViewProps extends ViewProps {
     /** 
@@ -30,8 +32,6 @@ export default class UnityView extends React.Component<UnityViewProps> {
 
     public constructor(props: any) {
         super(props);
-
-        this.setNativeUnityView = this.setNativeUnityView.bind(this);
 
         this.m_registrationToken = UnityModule.addMessageListener(message => {
             if (this.props.onUnityMessage && message instanceof UnityMessageHandlerImpl) {
@@ -84,7 +84,6 @@ export default class UnityView extends React.Component<UnityViewProps> {
         return (
             <View {...props}>
                 <NativeUnityView
-                    ref={this.setNativeUnityView}
                     style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }}
                     onUnityMessage={onUnityMessage}
                     onMessage={onMessage}
@@ -93,9 +92,6 @@ export default class UnityView extends React.Component<UnityViewProps> {
                 {this.props.children}
             </View>
         );
-    }
-
-    private setNativeUnityView(unityView: React.Component<UnityViewProps> | null) {
     }
 }
 
