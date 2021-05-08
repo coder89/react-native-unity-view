@@ -34,6 +34,7 @@ namespace Reinforced.Typings.Visitors
 
         public abstract T Visit(RtField node);
         public abstract T Visit(RtInterface node);
+        public abstract T Visit(RtAnonymousObject node);
         public abstract T Visit(RtFunction node);
         public abstract T Visit(RtArgument node);
         public abstract T Visit(RtClass node);
