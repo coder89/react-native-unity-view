@@ -29,6 +29,16 @@ namespace Reinforced.Typings.Fluent
         }
 
         /// <summary>
+        ///     Specifies code generator for member
+        /// </summary>
+        public static FieldExportBuilder WithFieldCodeGenerator2<T>(this FieldExportBuilder conf)
+            where T : ITsCodeGenerator<FieldInfo[]>
+        {
+            conf.Attr.CodeGeneratorType = typeof(T);
+            return conf;
+        }
+
+        /// <summary>
         /// Sets order this membter will be written to output file in
         /// </summary>
         /// <param name="conf">Configurator</param>

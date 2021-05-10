@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Reinforced.Typings.Attributes
 {
@@ -16,6 +17,7 @@ namespace Reinforced.Typings.Attributes
             IncludeNamespace = true;
             // ReSharper restore VirtualMemberCallInConstructor
             FlattenLimiter = typeof(object);
+            Implementees = new List<Type>();
         }
 
         /// <summary>
@@ -48,5 +50,9 @@ namespace Reinforced.Typings.Attributes
         /// All types "deeper" than specified parent will not be considered as exporting members donors
         /// </summary>
         public Type FlattenLimiter { get; set; }
+
+        /// <summary>
+        /// </summary>
+        public IList<Type> Implementees { get; private set; }
     }
 }

@@ -23,6 +23,10 @@ namespace Reinforced.Typings.Fluent
                 _member = member;
                 _forMember = containingTypeBlueprint.ForMember(member,true);
             }
+            else
+            {
+                _forMember = new TsPropertyAttribute();
+            }
         }
 
         internal virtual bool IsIgnored

@@ -18,7 +18,7 @@ namespace Reinforced.Typings.Fluent
             Blueprint = blueprint;
             if (blueprint.ThirdParty == null)
             {
-                blueprint.ThirdParty = new TsThirdPartyAttribute(Type.FullName);
+                blueprint.ThirdParty = new TsThirdPartyAttribute(Type.CleanGenericName());
             }
         }
 

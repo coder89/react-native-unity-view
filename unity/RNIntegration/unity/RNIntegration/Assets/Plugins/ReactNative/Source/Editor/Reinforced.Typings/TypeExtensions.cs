@@ -293,8 +293,7 @@ namespace Reinforced.Typings
         ///     Binding flags for searching all members
         /// </summary>
         public const BindingFlags PublicMembersFlags =
-            BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static |
-            BindingFlags.DeclaredOnly;
+            BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static;
 
 #region Inheritance flatten
         /// <summary>
@@ -416,10 +415,11 @@ namespace Reinforced.Typings
             bool flattenHierarchy,
             Func<Type, BindingFlags, T[]> membersGetter,
             Type limiter,
-            bool publicOnly = false)
+            bool publicOnly = true)
             where T : MemberInfo
         {
             var declaredFlags = publicOnly ? PublicMembersFlags : MembersFlags;
+            declaredFlags |= (flattenHierarchy ? BindingFlags.FlattenHierarchy : BindingFlags.DeclaredOnly);
 
             T[] baseSet = null;
             baseSet = flattenHierarchy ?
@@ -435,9 +435,10 @@ namespace Reinforced.Typings
             bool publicOnly = false)
             where T : MemberInfo
         {
-            var declaredFlags = publicOnly ? PublicMembersFlags : MembersFlags;
-            var flattenHierarchy = t.TypeAttribute.FlattenHierarchy;
             var limiter = t.TypeAttribute.FlattenLimiter;
+            var flattenHierarchy = t.TypeAttribute.FlattenHierarchy;
+            var declaredFlags = publicOnly ? PublicMembersFlags : MembersFlags;
+            declaredFlags |= (flattenHierarchy ? BindingFlags.FlattenHierarchy : BindingFlags.DeclaredOnly);
 
             T[] baseSet = null;
             baseSet = flattenHierarchy ?
@@ -764,7 +765,10 @@ namespace Reinforced.Typings
             {
                 var name = t.Name;
                 var qidx = name.IndexOf('`');
-                return name.Substring(0, qidx);
+                if (qidx >= 0)
+                {
+                    return name.Substring(0, qidx);
+                }
             }
             return t.Name;
         }

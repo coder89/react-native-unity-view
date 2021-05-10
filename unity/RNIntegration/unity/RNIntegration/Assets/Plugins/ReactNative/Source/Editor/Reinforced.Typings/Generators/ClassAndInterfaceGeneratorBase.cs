@@ -161,6 +161,11 @@ namespace Reinforced.Typings.Generators
 
                 if (inferredBaseType != null) yield return inferredBaseType;
             }
+
+            foreach(var i in Context.Project.Blueprint(type).Attr<TsDeclarationAttributeBase>().Implementees)
+            {
+                yield return resolver.ResolveTypeName(i, materializedGenericParameters);
+            }
         }
 
         /// <summary>

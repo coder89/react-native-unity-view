@@ -46,7 +46,19 @@ namespace Reinforced.Typings.Fluent
             return tc;
         }
 
-        
+        /// <summary>
+        ///     Include specified field to resulting typing
+        /// </summary>
+        /// <param name="tc">Configuration builder</param>
+        /// <param name="fieldName">Name of field to include</param>
+        /// <param name="configuration">Configuration to be applied to selected field</param>
+        /// <returns>Fluent</returns>
+        public static T WithCustomField<T>(this T tc, string fieldName, Action<FieldExportBuilder> configuration)
+            where T : ClassOrInterfaceExportBuilder
+        {
+            tc.WithFields(new FieldInfo[] { null }, configuration);
+            return tc;
+        }
 
         /// <summary>
         ///     Include specified fields to resulting typing

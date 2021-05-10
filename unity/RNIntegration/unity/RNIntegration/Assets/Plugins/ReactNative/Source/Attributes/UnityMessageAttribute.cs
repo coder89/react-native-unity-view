@@ -2,7 +2,7 @@
 
 namespace ReactNative
 {
-    [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, AllowMultiple = true)]
     public sealed class UnityMessageAttribute : Attribute
     {
         public UnityMessageAttribute(string id)
